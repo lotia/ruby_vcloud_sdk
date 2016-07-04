@@ -129,20 +129,21 @@ module VCloudSdk
       end
     end
 
-    def attach_disk(disk)
+
+    def attach_disk(disk, bus_num=0, unit_num=0)
       fail CloudError,
            "Disk '#{disk.name}' of link #{disk.href} is attached to VM '#{disk.vm.name}'" if disk.attached?
 
       task = connection.post(entity_xml.attach_disk_link.href,
-                             disk_attach_or_detach_params(disk),
+                             disk_attach_or_detach_params(disk, bus_num, unit_num),
                              Xml::MEDIA_TYPE[:DISK_ATTACH_DETACH_PARAMS])
       monitor_task(task)
 
-      Config.logger.info "Disk '#{disk.name}' is attached to VM '#{name}'"
+      Config.logger.info "Disk '#{disk.name}' is attached to VM '#{name}' on bus #{bus_num} as unit #{unit_num}"
       self
     end
 
-    def detach_disk(disk)
+    def detach_disk(disk, bus_num=0, unit_num=0)
       parent_vapp = vapp
       if parent_vapp.status == "SUSPENDED"
         fail VmSuspendedError,
@@ -155,11 +156,11 @@ module VCloudSdk
       end
 
       task = connection.post(entity_xml.detach_disk_link.href,
-                             disk_attach_or_detach_params(disk),
+                             disk_attach_or_detach_params(disk, bus_num, unit_num),
                              Xml::MEDIA_TYPE[:DISK_ATTACH_DETACH_PARAMS])
       monitor_task(task)
 
-      Config.logger.info "Disk '#{disk.name}' is detached from VM '#{name}'"
+      Config.logger.info "Disk '#{disk.name}' unit #{unit_num} on bus #{bus_num} is detached from VM '#{name}'"
       self
     end
 
@@ -347,11 +348,13 @@ module VCloudSdk
       i
     end
 
-    def disk_attach_or_detach_params(disk)
+    def disk_attach_or_detach_params(disk, bus_num=0, unit_num=0)
       Xml::WrapperFactory
         .create_instance("DiskAttachOrDetachParams")
         .tap do |params|
         params.disk_href = disk.href
+        params.disk_bus = bus_num
+        params.disk_unit = unit_num
       end
     end
 
